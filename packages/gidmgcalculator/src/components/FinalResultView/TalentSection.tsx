@@ -3,7 +3,7 @@ import { SectionHeader } from "./SectionHeader";
 import { SectionTable, SectionTableProps } from "./SectionTable";
 import { TableCalcItemKey } from "./utils";
 import { useTranslation } from "@/hooks";
-import { MdEdit } from "react-icons/md";
+import { MdEdit, MdContentCopy, MdCheck } from "react-icons/md";
 import { LevelableTalentType } from "@/types";
 
 type TalentSectionProps = Pick<SectionTableProps, "headerConfigs" | "getRowConfig"> & {
@@ -15,6 +15,8 @@ type TalentSectionProps = Pick<SectionTableProps, "headerConfigs" | "getRowConfi
   onRequestChangeLevel: () => void;
   onToggle: () => void;
   onLevelChange: (talent: LevelableTalentType, level: number) => void;
+  onCopy?: () => void;
+  copied?: boolean;
 };
 
 export function TalentSection({
@@ -26,6 +28,8 @@ export function TalentSection({
   onRequestChangeLevel,
   onToggle,
   onLevelChange,
+  onCopy,
+  copied,
   ...sectionProps
 }: TalentSectionProps) {
   const { t } = useTranslation();
@@ -58,15 +62,32 @@ export function TalentSection({
         open={open}
         level={level}
         extra={
-          talentMutable && talentType ? (
-            <Button
-              boneOnly
-              size="custom"
-              className={`w-7 h-7 text-lg ${isLvling ? "text-active" : "text-light-4"}`}
-              icon={<MdEdit />}
-              onClick={() => onRequestChangeLevel()}
-            />
-          ) : null
+          <div className="flex items-center gap-2">
+            {onCopy && (
+              <Button
+                size="custom"
+                className="px-2 py-1 h-7 text-lg bg-dark-2 hover:bg-dark-3 text-light-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCopy();
+                }}
+              >
+                {copied ? <MdCheck /> : <MdContentCopy />}
+              </Button>
+            )}
+            {talentMutable && talentType ? (
+              <Button
+                boneOnly
+                size="custom"
+                className={`w-7 h-7 text-lg ${isLvling ? "text-active" : "text-light-4"}`}
+                icon={<MdEdit />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRequestChangeLevel();
+                }}
+              />
+            ) : null}
+          </div>
         }
         onClickTitle={onToggle}
       />

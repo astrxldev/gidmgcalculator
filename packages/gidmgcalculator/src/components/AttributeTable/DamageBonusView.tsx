@@ -25,11 +25,14 @@ export function DamageBonusView({ attributes, attkBonusCtrl }: DamageBonusViewPr
   const [activeTab, setActiveTab] = useState<DamageBonusType>("elemental");
 
   const elementalRows = ATTACK_ELEMENTS.map((type) => {
+    const value = attributes.get(type);
+    if (round(value, 1) === 0) return null;
+
     const label = t(`${type}_attElmt`) + " DMG Bonus";
     return (
       <Row key={type} aria-label={label}>
         <Cell>{label}</Cell>
-        <Cell className="mr-2">{round(attributes.get(type), 1)}%</Cell>
+        <Cell className="mr-2">{round(value, 1)}%</Cell>
       </Row>
     );
   });

@@ -5,6 +5,7 @@
     "packages/*"
   ],
   "scripts": {
+    "sync:upstream": "bash scripts/sync-upstream.sh",
     "gidmgcalculator:dev": "cd packages/gidmgcalculator && npm run dev",
     "gidmgcalculator:build": "cd packages/gidmgcalculator && npm run build",
     "rond:storybook": "cd packages/rond && npm run storybook",

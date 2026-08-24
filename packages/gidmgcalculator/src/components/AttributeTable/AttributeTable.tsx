@@ -54,9 +54,11 @@ export function AttributeTable({ className, attributes, attkBonusCtrl }: Attribu
         );
       })}
 
-      <EmSection value={attributes.get("em")} />
+      {attributes.get("em") ? <EmSection value={attributes.get("em")} /> : null}
 
       {(["cRate_", "cDmg_", "er_", "healB_", "inHealB_", "shieldS_"] as const).map((type) => {
+        const val = attributes.get(type);
+        if (Math.round(val * 10) / 10 === 0) return null;
         const label = t(type);
         return (
           <Row key={type} aria-label={label}>
@@ -69,6 +71,8 @@ export function AttributeTable({ className, attributes, attkBonusCtrl }: Attribu
       <DamageBonusView attributes={attributes} attkBonusCtrl={attkBonusCtrl} />
 
       {(["naAtkSpd_", "caAtkSpd_"] as const).map((type) => {
+        const val = attributes.get(type);
+        if (Math.round(val * 10) / 10 === 0) return null;
         const label = t(type);
         return (
           <Row key={type} aria-label={label}>
