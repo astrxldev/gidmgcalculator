@@ -4,6 +4,7 @@ import { useTranslation } from "@/hooks";
 import { attackCalcItemSubtitleParts, displayValues } from "./utils";
 
 import { FinalResultLayout, type FinalResultLayoutProps } from "./FinalResultLayout";
+import { useRotationSheetBridge } from "@/screens/Calculator/RotationSheet/context";
 
 type FinalResultViewProps = Pick<
   FinalResultLayoutProps,
@@ -14,6 +15,7 @@ type FinalResultViewProps = Pick<
 
 export function FinalResultView({ finalResult, ...props }: FinalResultViewProps) {
   const { t } = useTranslation();
+  const { insertDamageReference, isPickingReference } = useRotationSheetBridge();
 
   return (
     <FinalResultLayout
@@ -64,7 +66,14 @@ export function FinalResultView({ finalResult, ...props }: FinalResultViewProps)
             },
             {
               value: displayValues(result?.values, "average"),
-              className: "text-right text-primary-1",
+              className: `text-right text-primary-1${
+                isPickingReference && result ? " cursor-pointer hover:bg-dark-2" : ""
+              }`,
+              title: isPickingReference ? "Insert this Average value into the Rotation Sheet" : undefined,
+              onClick:
+                isPickingReference && result
+                  ? () => insertDamageReference?.({ mainKey, subKey })
+                  : undefined,
             },
           ],
           onDoubleClick() {

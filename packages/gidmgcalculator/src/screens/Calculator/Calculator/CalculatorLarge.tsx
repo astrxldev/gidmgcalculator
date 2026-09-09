@@ -7,7 +7,13 @@ import { useCalcStore } from "@Store/calculator";
 // Components
 import { Card } from "../components/Card";
 import { ContextProvider } from "../ContextProvider";
-import { ModifiersCard, OverviewCard, ResultsCard, SetupCard } from "./CardComponents";
+import {
+  ModifiersCard,
+  OverviewCard,
+  ResultsCard,
+  RotationSheetCard,
+  SetupCard,
+} from "./CardComponents";
 
 const FlexibleCard: typeof Card = ({ className, style, ...restProps }) => {
   const comparedCount = useCalcStore((state) => state.comparedIds.length);
@@ -45,6 +51,7 @@ function LargeCalculator() {
             <ModifiersCard touched={touched} />
             <SetupCard touched={touched} />
             <ResultsCard touched={touched} className="pt-2" CardComponent={FlexibleCard} />
+            <RotationSheetCard touched={touched} className="sm:w-[30rem]" />
           </div>
         </div>
       </div>

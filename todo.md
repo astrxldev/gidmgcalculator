@@ -403,3 +403,120 @@ Finally, load at least one production domain in a browser and repeat the runtime
 - [ ] The Cloudflare deployment list marks the newest release as `Production`.
 - [ ] The immutable deployment and both production domains serve the same asset hash.
 - [ ] A production domain renders without the duplicate-React `useState` exception.
+
+---
+
+## 11. Rotation Sheet — Recovery and Reimplementation Reference
+
+This feature embeds a spreadsheet beside the calculator so a user can select a sheet cell and then click an **Avg.** damage result such as `High Plunge ... 37`. The selected cell must immediately receive a live formula reference instead of a copied static number. Preserve or reconstruct this section after an upstream merge removes the feature.
+
+### Required packages
+
+Keep both Univer packages on the same exact version in `packages/gidmgcalculator/package.json` and regenerate `package-lock.json` when changing versions:
+
+```json
+"@univerjs/preset-sheets-core": "0.25.1",
+"@univerjs/presets": "0.25.1"
+```
+
+Do not replace these with Pro packages. The feature uses the Apache-2.0 open-source core spreadsheet and formula engine.
+
+### Required files and integration points
+
+The isolated implementation belongs in:
+
+```text
+packages/gidmgcalculator/src/screens/Calculator/RotationSheet/
+  RotationSheet.tsx
+  context.tsx
+  storage.ts
+  index.ts
+```
+
+Only the following upstream-owned areas should need small integration edits:
+
+- `Calculator/ContextProvider/ContextProvider.tsx`: wrap calculator cards with `RotationSheetProvider`.
+- `Calculator/Calculator/CardComponents.tsx`: expose `RotationSheetCard` using the existing calculator `Card` component.
+- `CalculatorLarge.tsx`: place a compact `30rem` Rotation card immediately after Results.
+- `CalculatorSmall.tsx`: add `ROTATION` as the fifth panel, change the modern carousel to `500%`/`20%`, and append the card to the legacy snap layout.
+- `components/FinalResultView/FinalResultView.tsx`: make only the Average result cell invoke the Rotation Sheet reference bridge. Other uses of `FinalResultView` must remain safe outside the provider.
+
+If an upstream merge conflicts, prefer retaining upstream layout/refactors and reapply only these narrow behaviors. Do not move spreadsheet state into the upstream calculator setup schema.
+
+### Damage source rules
+
+Build a hidden internal worksheet named `Damage Data`. The user sees only one editable sheet named `Rotation`.
+
+- Identify each source with the stable pair `{ mainKey, subKey }`, serialized consistently.
+- Allocate one persistent hidden-sheet row per source and save that key-to-row map. Never renumber existing sources when result order changes.
+- Column A stores the serialized source key; column B stores its numeric Average damage.
+- Compute the value as the sum of every individually rounded Average component:
+
+```typescript
+const average = item.values.reduce(
+  (total, part) => total + Math.round(part.average),
+  0,
+);
+```
+
+- Refresh hidden values whenever the active setup recalculates because of stats, equipment, buffs, target, or talent changes.
+- Set disappeared sources to `=NA()` so dependent user formulas show an error rather than silently using zero or stale damage.
+- Do not expose Non-crit or Crit values to reference selection.
+
+### Direct selection behavior
+
+The primary workflow must not require copying, pasting, or pressing Apply:
+
+1. The user selects a cell in the Rotation spreadsheet.
+2. The bridge remembers that active cell and enables Average-cell selection.
+3. The user clicks an Average damage result in Results.
+4. The selected spreadsheet cell is immediately assigned an absolute live reference such as:
+
+```text
+='Damage Data'!$B$2
+```
+
+If the selected cell already contains a formula beginning with `=`, append the new reference so the user can construct rotation math. The compact formula field above the grid remains available for adding operators and hit counts. It must auto-apply every edit directly to the selected spreadsheet cell; do not add or require an Apply button. A standalone `=` remains an uncommitted draft until the user types more content or selects a damage reference.
+
+When inserting another damage reference, the current formula-field text is authoritative and must take precedence over the formula previously saved in the Univer cell. This preserves an operator typed after the previous reference:
+
+```text
+='Damage Data'!$B$2 + 'Damage Data'!$B$5
+```
+
+Do not reload the older saved formula immediately before insertion, because doing so removes a newly typed `+`, `-`, `*`, or `/`. Typing `=` directly in the spreadsheet should also activate reference selection where Univer forwards the keyboard event.
+
+Do not enable reference picking in the multi-setup comparison result view; only the active single setup is a valid source.
+
+### Spreadsheet sizing and lifecycle
+
+- Configure `UniverSheetsCorePreset` with `header: false`, `toolbar: false`, and `footer: false` so the grid fits inside the calculator card.
+- Use compact card padding and a `30rem` desktop width; mobile continues to use the full panel width.
+- Initialize Univer after the container mounts and dispose the API, selection listener, command listener, and pending save timer on unmount or setup change.
+- Import Univer's core preset CSS exactly once from the Rotation Sheet module.
+
+### Per-setup persistence
+
+Autosave a versioned envelope in browser `localStorage`, keyed by calculator setup ID:
+
+```typescript
+type RotationSheetSave = {
+  version: 1;
+  workbook: IWorkbookData;
+  sourceRows: Record<string, number>;
+};
+```
+
+Use the key prefix `gidmgcalculator.rotation-sheet.v1.`. Debounce normal saves, save synchronously during cleanup, and catch storage/JSON errors so spreadsheet persistence can never break the calculator. Switching setups must restore independent workbooks.
+
+### Verification checklist
+
+- [ ] Select a blank Rotation cell, click an Avg. result, and confirm the cell immediately receives a formula and displays the damage.
+- [ ] Edit the formula field and confirm every valid change updates the selected cell without an Apply button.
+- [ ] Select one damage value, type `+`, select a second damage value, and confirm the operator remains between both live references.
+- [ ] Change a calculator input and confirm the referenced sheet result updates automatically.
+- [ ] Confirm multi-component damage uses the sum of displayed rounded components.
+- [ ] Remove/change a referenced result and confirm the formula reports a missing-reference error.
+- [ ] Switch setups and confirm each setup restores its own sheet after switching back and after browser reload.
+- [ ] Confirm Avg. cells are not reference targets in comparison mode.
+- [ ] Run `bunx tsc -p tsconfig.type-check.json --noEmit`, targeted ESLint, the exact build order in section 8, and the browser runtime checks before deployment.

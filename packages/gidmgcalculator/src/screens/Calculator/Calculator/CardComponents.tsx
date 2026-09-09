@@ -7,6 +7,7 @@ import { FinalResult } from "../FinalResult";
 import { Modifiers } from "../Modifiers";
 import { SetupDirector } from "../SetupDirector";
 import { SetupManager } from "../SetupManager";
+import { RotationSheet } from "../RotationSheet";
 
 type CardProps = {
   touched: boolean;
@@ -42,4 +43,10 @@ export const ResultsCard = ({
   <CardComponent className={["bg-dark-3", className]} style={style}>
     {touched && <FinalResult />}
   </CardComponent>
+);
+
+export const RotationSheetCard = (props: CardProps) => (
+  <Card className={["bg-dark-3 p-2", props.className]} style={props.style}>
+    {props.touched && <RotationSheet />}
+  </Card>
 );

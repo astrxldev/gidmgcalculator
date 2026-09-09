@@ -17,6 +17,8 @@
     "@rc-component/dropdown": "1.0.2",
     "@reduxjs/toolkit": "1.8.3",
     "@tanstack/react-query": "5.67.1",
+    "@univerjs/preset-sheets-core": "0.25.1",
+    "@univerjs/presets": "0.25.1",
     "dompurify": "3.4.2",
     "immer": "9.0.21",
     "js-sha256": "0.11.1",

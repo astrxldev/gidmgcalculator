@@ -8,9 +8,15 @@ import { updateUI } from "@Store/ui";
 // Components
 import { ContextProvider } from "../ContextProvider";
 import { BottomNavSmall, BottomNavSmallProps } from "./BottomNavSmall";
-import { ModifiersCard, OverviewCard, ResultsCard, SetupCard } from "./CardComponents";
+import {
+  ModifiersCard,
+  OverviewCard,
+  ResultsCard,
+  RotationSheetCard,
+  SetupCard,
+} from "./CardComponents";
 
-type CalculatorPanelType = "OVERVIEW" | "MODIFIERS" | "SETUP" | "RESULTS";
+type CalculatorPanelType = "OVERVIEW" | "MODIFIERS" | "SETUP" | "RESULTS" | "ROTATION";
 
 export function CalculatorSmall() {
   const touched = useCalcStore((state) => state.setupManagers.length !== 0);
@@ -40,6 +46,7 @@ export function CalculatorSmall() {
       value: "SETUP",
     },
     { label: "Results", value: "RESULTS" },
+    { label: "Rotation", value: "ROTATION" },
   ];
 
   const activeIndex = panelOptions.findIndex((option) => option.value === activePanel) ?? 0;
@@ -51,12 +58,13 @@ export function CalculatorSmall() {
           <div className="grow overflow-hidden relative">
             <div
               className="h-full overflow-auto flex absolute left-0 top-0"
-              style={{ width: "400%", transform: `translateX(calc(-25% * ${activeIndex}))` }}
+              style={{ width: "500%", transform: `translateX(calc(-20% * ${activeIndex}))` }}
             >
-              <OverviewCard touched={touched} className="w-1/4" />
-              <ModifiersCard touched={touched} className="w-1/4" />
-              <SetupCard touched={touched} className="w-1/4" />
-              <ResultsCard touched={touched} className="w-1/4" />
+              <OverviewCard touched={touched} className="w-1/5" />
+              <ModifiersCard touched={touched} className="w-1/5" />
+              <SetupCard touched={touched} className="w-1/5" />
+              <ResultsCard touched={touched} className="w-1/5" />
+              <RotationSheetCard touched={touched} className="w-1/5" />
             </div>
           </div>
 
@@ -77,6 +85,7 @@ export function CalculatorSmall() {
           <ModifiersCard touched={touched} />
           <SetupCard touched={touched} />
           <ResultsCard touched={touched} />
+          <RotationSheetCard touched={touched} />
         </div>
       )}
     </ContextProvider>
