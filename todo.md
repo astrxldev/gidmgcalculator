@@ -490,7 +490,8 @@ Do not enable reference picking in the multi-setup comparison result view; only 
 
 ### Spreadsheet sizing and lifecycle
 
-- Configure `UniverSheetsCorePreset` with `header: false`, `toolbar: false`, and `footer: false` so the grid fits inside the calculator card.
+- Configure `UniverSheetsCorePreset` with `header: true`, `toolbar: true`, and `footer: {}` so the full spreadsheet controls remain available inside the calculator card.
+- Keep the toolbar overflow popover open while its commands are clicked; it should close only when the user clicks elsewhere.
 - Use compact card padding and a `30rem` desktop width; mobile continues to use the full panel width.
 - Initialize Univer after the container mounts and dispose the API, selection listener, command listener, and pending save timer on unmount or setup change.
 - Import Univer's core preset CSS exactly once from the Rotation Sheet module.

@@ -39,12 +39,16 @@ function collectAverageDamage(result: CalcResult) {
 }
 
 export function RotationSheet() {
-  const { setupId, result } = useShallowCalcStore((state) => ({
+  const { setupId, characterCode, result } = useShallowCalcStore((state) => ({
     setupId: state.activeId,
+    characterCode: selectSetup(state)?.main.code,
     result: selectSetup(state)?.result,
   }));
   const damageByKey = useMemo(() => (result ? collectAverageDamage(result) : {}), [result]);
   const { registerReferenceInserter, setPickingReference } = useRotationSheetBridge();
+
+  const legacySetupIdRef = useRef(setupId);
+  legacySetupIdRef.current = setupId;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const formulaInputRef = useRef<HTMLInputElement>(null);
@@ -55,16 +59,54 @@ export function RotationSheet() {
   const [activeCellLabel, setActiveCellLabel] = useState("A1");
   const [formulaInput, setFormulaInput] = useState("");
 
+  useEffect(() => {
+    let reopenFrame: number | undefined;
+
+    const keepToolbarOverflowOpen = (event: MouseEvent) => {
+      const moreButton = containerRef.current?.querySelector<HTMLButtonElement>(
+        '[data-u-comp="ribbon-toolbar-more"] button[aria-expanded="true"]',
+      );
+      const popoverId = moreButton?.getAttribute("aria-controls");
+      const target = event.target instanceof Element ? event.target : undefined;
+      const popover = target?.closest<HTMLElement>('[data-slot="popover-content"]');
+
+      if (
+        !moreButton ||
+        !popoverId ||
+        popover?.id !== popoverId ||
+        !target?.closest("[data-u-command]")
+      ) {
+        return;
+      }
+
+      // Univer closes the overflow popover after executing a toolbar command.
+      // Restore it after that state update while leaving outside-click closing intact.
+      if (reopenFrame !== undefined) cancelAnimationFrame(reopenFrame);
+      reopenFrame = requestAnimationFrame(() => {
+        reopenFrame = undefined;
+        if (moreButton.isConnected && moreButton.getAttribute("aria-expanded") !== "true") {
+          moreButton.click();
+        }
+      });
+    };
+
+    document.addEventListener("click", keepToolbarOverflowOpen, true);
+    return () => {
+      if (reopenFrame !== undefined) cancelAnimationFrame(reopenFrame);
+      document.removeEventListener("click", keepToolbarOverflowOpen, true);
+    };
+  }, []);
+
   const persist = useCallback(() => {
     const workbook = apiRef.current?.getActiveWorkbook();
-    if (!workbook) return;
+    if (!workbook || characterCode === undefined) return;
 
-    saveRotationSheet(setupId, {
+    saveRotationSheet(characterCode, {
       version: 1,
       workbook: workbook.save(),
       sourceRows: sourceRowsRef.current,
     });
-  }, [setupId]);
+  }, [characterCode]);
 
   const schedulePersist = useCallback(() => {
     clearTimeout(saveTimerRef.current);
@@ -72,9 +114,9 @@ export function RotationSheet() {
   }, [persist]);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || characterCode === undefined) return;
 
-    const saved = loadRotationSheet(setupId);
+    const saved = loadRotationSheet(characterCode, legacySetupIdRef.current);
     sourceRowsRef.current = saved?.sourceRows || {};
 
     const { univerAPI } = createUniver({
@@ -85,22 +127,24 @@ export function RotationSheet() {
       presets: [
         UniverSheetsCorePreset({
           container: containerRef.current,
-          header: false,
-          toolbar: false,
-          footer: false,
+          header: true,
+          toolbar: true,
+          footer: {},
         }),
       ],
     });
     apiRef.current = univerAPI;
 
     const workbook = univerAPI.createWorkbook(saved?.workbook || { name: "Rotation" });
-    const firstSheet = workbook.getSheets()[0];
-    if (firstSheet && firstSheet.getSheetName() !== "Rotation") firstSheet.setName("Rotation");
+    const firstSheet = workbook.getSheets().find((sheet) => sheet.getSheetName() !== SOURCE_SHEET)
+      || workbook.insertSheet("Rotation");
+    if (firstSheet.getSheetName() !== "Rotation") firstSheet.setName("Rotation");
+    if (firstSheet.isSheetHidden()) firstSheet.showSheet();
 
     let sourceSheet = workbook.getSheetByName(SOURCE_SHEET);
     if (!sourceSheet) sourceSheet = workbook.insertSheet(SOURCE_SHEET);
-    sourceSheet.hideSheet();
-    if (firstSheet) workbook.setActiveSheet(firstSheet);
+    if (!sourceSheet.isSheetHidden()) sourceSheet.hideSheet();
+    workbook.setActiveSheet(firstSheet);
 
     const updateActiveCell = () => {
       const cell = workbook.getActiveCell();
@@ -113,27 +157,49 @@ export function RotationSheet() {
       setPickingReference(true);
     };
 
-    updateActiveCell();
+    const initializeSelection = () => {
+      workbook.setActiveSheet(firstSheet);
+      firstSheet.getRange("A1").activate();
+      updateActiveCell();
+    };
+    const lifecycleDisposable = univerAPI.addEvent(univerAPI.Event.LifeCycleChanged, ({ stage }) => {
+      if (stage === univerAPI.Enum.LifecycleStages.Rendered) initializeSelection();
+    });
+    if (univerAPI.getCurrentLifecycleStage() >= univerAPI.Enum.LifecycleStages.Rendered) {
+      initializeSelection();
+    }
     const selectionDisposable = workbook.onSelectionChange(updateActiveCell);
     const commandDisposable = workbook.onCommandExecuted(schedulePersist);
+    const flush = () => {
+      clearTimeout(saveTimerRef.current);
+      persist();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       clearTimeout(saveTimerRef.current);
       const currentWorkbook = univerAPI.getActiveWorkbook();
       if (currentWorkbook) {
-        saveRotationSheet(setupId, {
+        saveRotationSheet(characterCode, {
           version: 1,
           workbook: currentWorkbook.save(),
           sourceRows: sourceRowsRef.current,
         });
       }
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      lifecycleDisposable.dispose();
       selectionDisposable.dispose();
       commandDisposable.dispose();
       apiRef.current = undefined;
       activeCellRef.current = undefined;
       univerAPI.dispose();
     };
-  }, [schedulePersist, setPickingReference, setupId]);
+  }, [schedulePersist, persist, setPickingReference, characterCode]);
 
   useEffect(() => {
     const workbook = apiRef.current?.getActiveWorkbook();
