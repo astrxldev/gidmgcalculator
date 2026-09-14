@@ -4,7 +4,6 @@ import { UniverSheetsCorePreset } from "@univerjs/preset-sheets-core";
 import UniverPresetSheetsCoreEnUS from "@univerjs/preset-sheets-core/locales/en-US";
 
 import type { CalcResult } from "@/logic/calculator";
-import type { CalcResultItem } from "@/calculation/types";
 import { useShallowCalcStore } from "@Store/calculator";
 import { selectSetup } from "@Store/calculator/selectors";
 import { useRotationSheetBridge, type DamageSourceKey } from "./context";
@@ -24,14 +23,13 @@ function collectAverageDamage(result: CalcResult) {
   const damageByKey: Record<string, number> = {};
 
   for (const [mainKey, group] of Object.entries(result)) {
-    for (const [subKey, item] of Object.entries(group)) {
+    for (const [subKey, item] of group) {
       if (!item) continue;
 
-      const typedItem = item as CalcResultItem;
-      damageByKey[serializeSourceKey({ mainKey, subKey })] = typedItem.values.reduce(
-        (total: number, part: { average: number }) => total + Math.round(part.average),
-        0,
-      );
+      damageByKey[serializeSourceKey({ mainKey, subKey })] =
+        item.type === "attack" || item.type === "reaction"
+          ? item.results.reduce((total, part) => total + Math.round(part.average), 0)
+          : Math.round(item.result);
     }
   }
 

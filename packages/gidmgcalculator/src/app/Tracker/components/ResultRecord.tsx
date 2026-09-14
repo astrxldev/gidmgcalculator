@@ -2,7 +2,6 @@ import { ComponentProps } from "react";
 import { round } from "ron-utils";
 
 import type { AttackBonusControl } from "@/models/Character";
-import type { TalentCalcItemBonusId } from "@/types";
 
 import { useTranslation } from "@/hooks";
 import { suffixOf } from "@/utils/ui.utils";
@@ -19,28 +18,29 @@ export function Heading({ label, children, ...rest }: ComponentProps<"span"> & {
 }
 
 type RecordExclusivesProps = {
-  id: TalentCalcItemBonusId;
-  attkBonusCtrl: AttackBonusControl;
+  bonusGroups: ReturnType<AttackBonusControl["exclusiveGroups"]>;
 };
-export function RecordExclusives({ id, attkBonusCtrl }: RecordExclusivesProps) {
+
+export function RecordExclusives({ bonusGroups }: RecordExclusivesProps) {
   const { t } = useTranslation();
 
-  const exclusiveBonuses = attkBonusCtrl.exclusiveGroups(id);
-
-  if (exclusiveBonuses.length === 0) {
+  if (bonusGroups.length === 0) {
     return null;
   }
 
   return (
     <li>
       <p className="text-primary-1">Exclusive Bonus</p>
-      {exclusiveBonuses.map((bonus, i) => {
-        const percent = suffixOf(bonus.type);
+      {bonusGroups.map((group, i) => {
+        const percent = suffixOf(group.type);
 
-        return bonus.items.map((bonusItem, j) => (
+        return group.items.map((bonusItem, j) => (
           <p key={i + j}>
-            + {t(bonus.type)}: {bonusItem.label}{" "}
-            <PositiveText>{round(bonusItem.value, percent ? 2 : 0) + percent}</PositiveText>
+            + {t(group.type)}: {bonusItem.label}{" "}
+            <PositiveText>
+              {round(bonusItem.value, percent ? 2 : 0)}
+              {percent}
+            </PositiveText>
           </p>
         ));
       })}

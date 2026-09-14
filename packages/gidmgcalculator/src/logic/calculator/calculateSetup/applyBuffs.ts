@@ -1,26 +1,26 @@
 import { Array_ } from "ron-utils";
 
-import { Weapon, type Character, type Teammate } from "@/models";
+import type { Character } from "@/models/Character";
+import type { Teammate } from "@/models/Teammate";
 import type {
   AttackElement,
   AttackPattern,
   AttributeStat,
   AttributeTargetPath,
-  BareBonus,
   BonusCoreSpec,
-  BonusPerformTools,
   BonusSpec,
   BuffSpec,
   ReactionType,
 } from "@/types";
 import type { CalcSetup } from "../CalcSetup";
+import type { BareBonus, BonusPerformTools } from "../types";
 
 import {
   AMPLIFYING_REACTIONS,
   ELEMENT_TYPES,
-  LUNAR_TYPES,
+  LUNAR_REACTIONS,
   QUICKEN_REACTIONS,
-  STELLAR_TYPES,
+  STELLAR_REACTIONS,
   TRANSFORMATIVE_REACTIONS,
 } from "@/constants/global";
 import { getRxnBonusesFromEM } from "../getRxnBonusesFromEM";
@@ -218,7 +218,7 @@ export function applyBuffs(setup: CalcSetup, options: ApplyBuffsOptions = {}) {
   applyAbilityBuffs(false);
   applyWeaponBonuses(false);
 
-  if (main.isTraveler && weapon.code === Weapon.TRAVELER_SWORD_CODE && weapon.refi > 1) {
+  if (main.isTraveler && weapon.isTravelerSword && weapon.refi > 1) {
     applyBonus(
       `${weapon.data.name} bonus`,
       main,
@@ -379,47 +379,47 @@ export function applyBuffs(setup: CalcSetup, options: ApplyBuffsOptions = {}) {
   if (em) {
     const rxnBonuses = getRxnBonusesFromEM(em);
 
-    for (const rxn of TRANSFORMATIVE_REACTIONS) {
+    for (const rxn of STELLAR_REACTIONS) {
       attkBonusCtrl.add({
-        value: rxnBonuses.transformative,
         toType: rxn,
         toKey: "pct_",
-        label: "From Elemental Mastery",
-      });
-    }
-
-    for (const rxn of LUNAR_TYPES) {
-      attkBonusCtrl.add({
-        value: rxnBonuses.lunar,
-        toType: rxn,
-        toKey: "pct_",
-        label: "From Elemental Mastery",
-      });
-    }
-
-    for (const rxn of STELLAR_TYPES) {
-      attkBonusCtrl.add({
         value: rxnBonuses.stellar,
-        toType: rxn,
-        toKey: "pct_",
         label: "From Elemental Mastery",
       });
     }
 
-    for (const rxn of AMPLIFYING_REACTIONS) {
+    for (const rxn of LUNAR_REACTIONS) {
       attkBonusCtrl.add({
-        value: rxnBonuses.amplifying,
         toType: rxn,
         toKey: "pct_",
+        value: rxnBonuses.lunar,
         label: "From Elemental Mastery",
       });
     }
 
     for (const rxn of QUICKEN_REACTIONS) {
       attkBonusCtrl.add({
-        value: rxnBonuses.quicken,
         toType: rxn,
         toKey: "pct_",
+        value: rxnBonuses.quicken,
+        label: "From Elemental Mastery",
+      });
+    }
+
+    for (const rxn of AMPLIFYING_REACTIONS) {
+      attkBonusCtrl.add({
+        toType: rxn,
+        toKey: "pct_",
+        value: rxnBonuses.amplifying,
+        label: "From Elemental Mastery",
+      });
+    }
+
+    for (const rxn of TRANSFORMATIVE_REACTIONS) {
+      attkBonusCtrl.add({
+        toType: rxn,
+        toKey: "pct_",
+        value: rxnBonuses.transformative,
         label: "From Elemental Mastery",
       });
     }
