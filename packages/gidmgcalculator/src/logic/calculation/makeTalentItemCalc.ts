@@ -87,7 +87,7 @@ export function makeTalentItemCalc(
     const { attElmtAlter } = inputs;
     const { absorption, absorbReaction, infusion, infuseReaction } = elmtEvent;
 
-    const attPatt = alter.attPatt || item.attPatt || default_.attPatt;
+    const attPatt = item.attPatt || alter.attPatt || default_.attPatt;
     let attElmt: AttackElement;
     let reaction = elmtEvent.reaction;
 
@@ -203,13 +203,10 @@ export function makeTalentItemCalc(
         coefficient = DIRECT_LUNAR_REACTION_COEFFICIENTS[reaction];
         break;
       case "stellarSwirl":
-        attElmt = "anemo";
-        coefficient = 1;
-        break;
       case "stellarConduct":
         attElmt = performer.data.vision;
 
-        if (polestarProc && polestarCount) {
+        if (reaction === "stellarConduct" && polestarProc && polestarCount) {
           coefficient += 0.4 + polestarCount * 0.05;
         }
         break;
