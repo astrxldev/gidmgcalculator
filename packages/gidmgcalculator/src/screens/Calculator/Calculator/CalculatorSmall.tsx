@@ -6,7 +6,9 @@ import { useSettingsStore } from "@Store/settings";
 import { updateUI } from "@Store/ui";
 
 // Components
-import { ContextProvider } from "../ContextProvider";
+import { ContextProvider } from "../ContextProvider/ContextProvider";
+import { SetupURLImporter } from "../SetupURLImporter";
+import { TargetConfig } from "../TargetConfig";
 import { BottomNavSmall, BottomNavSmallProps } from "./BottomNavSmall";
 import {
   ModifiersCard,
@@ -20,7 +22,7 @@ type CalculatorPanelType = "OVERVIEW" | "MODIFIERS" | "SETUP" | "RESULTS" | "ROT
 
 export function CalculatorSmall() {
   const touched = useCalcStore((state) => state.setupManagers.length !== 0);
-  const isModernUI = useSettingsStore((state) => state.isTabLayout);
+  const isTabLayout = useSettingsStore((state) => state.isTabLayout);
 
   const [activePanel, setActivePanel] = useState<CalculatorPanelType>("OVERVIEW");
 
@@ -53,7 +55,7 @@ export function CalculatorSmall() {
 
   return (
     <ContextProvider>
-      {isModernUI ? (
+      {isTabLayout ? (
         <div className="h-full flex flex-col border-t border-dark-line">
           <div className="grow overflow-hidden relative">
             <div
@@ -68,13 +70,13 @@ export function CalculatorSmall() {
             </div>
           </div>
 
-          {touched ? (
+          {touched && (
             <BottomNavSmall
               value={activePanel}
               options={panelOptions}
               onSelect={(option) => handleSelectPanel(option.value)}
             />
-          ) : null}
+          )}
         </div>
       ) : (
         <div
@@ -88,6 +90,9 @@ export function CalculatorSmall() {
           <RotationSheetCard touched={touched} />
         </div>
       )}
+
+      <TargetConfig />
+      <SetupURLImporter />
     </ContextProvider>
   );
 }

@@ -6,7 +6,9 @@ import { useCalcStore } from "@Store/calculator";
 
 // Components
 import { Card } from "../components/Card";
-import { ContextProvider } from "../ContextProvider";
+import { ContextProvider } from "../ContextProvider/ContextProvider";
+import { SetupURLImporter } from "../SetupURLImporter";
+import { TargetConfig } from "../TargetConfig";
 import {
   ModifiersCard,
   OverviewCard,
@@ -55,6 +57,9 @@ function LargeCalculator() {
           </div>
         </div>
       </div>
+
+      <TargetConfig />
+      <SetupURLImporter />
     </ContextProvider>
   );
 }
