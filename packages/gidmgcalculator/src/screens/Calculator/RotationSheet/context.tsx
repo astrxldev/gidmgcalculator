@@ -1,8 +1,10 @@
+import type { CalcAspect } from "@/logic/calculation";
 import { createContext, ReactNode, useCallback, useContext, useMemo, useState } from "react";
 
 export type DamageSourceKey = {
   mainKey: string;
   subKey: string;
+  aspect: CalcAspect;
 };
 
 type RotationSheetBridge = {

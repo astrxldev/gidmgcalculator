@@ -4,6 +4,7 @@ export type RotationSheetSave = {
   version: 1;
   workbook: IWorkbookData;
   sourceRows: Record<string, number>;
+  managedNames?: string[];
 };
 
 const STORAGE_PREFIX = "gidmgcalculator.rotation-sheet.character.v1.";

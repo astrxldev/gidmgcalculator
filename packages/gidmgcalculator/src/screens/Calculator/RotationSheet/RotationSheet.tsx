@@ -3,7 +3,16 @@ import { createUniver, LocaleType, mergeLocales } from "@univerjs/presets";
 import { UniverSheetsCorePreset } from "@univerjs/preset-sheets-core";
 import UniverPresetSheetsCoreEnUS from "@univerjs/preset-sheets-core/locales/en-US";
 
-import type { CalcResult } from "@/logic/calculator";
+import type { CalcAspect } from "@/logic/calculation";
+import { getTableKeys } from "@/components/FinalResultView/utils";
+import {
+  ASPECT_COLUMNS,
+  DAMAGE_ASPECTS,
+  SOURCE_SHEET,
+  collectDamageSources,
+  replaceDamageReferences,
+  serializeSourceKey,
+} from "./damageReferences";
 import { useShallowCalcStore } from "@Store/calculator";
 import { selectSetup } from "@Store/calculator/selectors";
 import { useRotationSheetBridge, type DamageSourceKey } from "./context";
@@ -11,38 +20,24 @@ import { loadRotationSheet, saveRotationSheet } from "./storage";
 
 import "@univerjs/preset-sheets-core/lib/index.css";
 
-const SOURCE_SHEET = "Damage Data";
-
 type UniverApi = ReturnType<typeof createUniver>["univerAPI"];
 
-function serializeSourceKey(source: DamageSourceKey) {
-  return JSON.stringify([source.mainKey, source.subKey]);
-}
-
-function collectAverageDamage(result: CalcResult) {
-  const damageByKey: Record<string, number> = {};
-
-  for (const [mainKey, group] of Object.entries(result)) {
-    for (const [subKey, item] of group) {
-      if (!item) continue;
-
-      damageByKey[serializeSourceKey({ mainKey, subKey })] =
-        item.type === "attack" || item.type === "reaction"
-          ? item.results.reduce((total, part) => total + Math.round(part.average), 0)
-          : Math.round(item.result);
-    }
-  }
-
-  return damageByKey;
-}
-
 export function RotationSheet() {
-  const { setupId, characterCode, result } = useShallowCalcStore((state) => ({
+  const { setupId, characterCode, main, calcItems, result } = useShallowCalcStore((state) => ({
     setupId: state.activeId,
     characterCode: selectSetup(state)?.main.code,
+    main: selectSetup(state)?.main,
+    calcItems: selectSetup(state)?.calcItems,
     result: selectSetup(state)?.result,
   }));
-  const damageByKey = useMemo(() => (result ? collectAverageDamage(result) : {}), [result]);
+  const damageSources = useMemo(
+    () => main && result
+      ? collectDamageSources(result, getTableKeys(
+          main.data.calcList, main.weapon.data.calcItems, calcItems?.map((item) => item.name),
+        ))
+      : [],
+    [main, calcItems, result],
+  );
   const { registerReferenceInserter, setPickingReference } = useRotationSheetBridge();
 
   const legacySetupIdRef = useRef(setupId);
@@ -52,6 +47,8 @@ export function RotationSheet() {
   const formulaInputRef = useRef<HTMLInputElement>(null);
   const apiRef = useRef<UniverApi>();
   const sourceRowsRef = useRef<Record<string, number>>({});
+  const managedNamesRef = useRef<Set<string>>(new Set());
+  const sourceNamesRef = useRef<Record<string, Partial<Record<CalcAspect, string>>>>({});
   const activeCellRef = useRef<ReturnType<NonNullable<ReturnType<UniverApi["getActiveWorkbook"]>>["getActiveCell"]>>();
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const [activeCellLabel, setActiveCellLabel] = useState("A1");
@@ -103,6 +100,7 @@ export function RotationSheet() {
       version: 1,
       workbook: workbook.save(),
       sourceRows: sourceRowsRef.current,
+      managedNames: [...managedNamesRef.current],
     });
   }, [characterCode]);
 
@@ -116,6 +114,8 @@ export function RotationSheet() {
 
     const saved = loadRotationSheet(characterCode, legacySetupIdRef.current);
     sourceRowsRef.current = saved?.sourceRows || {};
+    managedNamesRef.current = new Set(saved?.managedNames || []);
+    sourceNamesRef.current = {};
 
     const { univerAPI } = createUniver({
       locale: LocaleType.EN_US,
@@ -186,6 +186,7 @@ export function RotationSheet() {
           version: 1,
           workbook: currentWorkbook.save(),
           sourceRows: sourceRowsRef.current,
+          managedNames: [...managedNamesRef.current],
         });
       }
       window.removeEventListener("pagehide", flush);
@@ -202,31 +203,76 @@ export function RotationSheet() {
   useEffect(() => {
     const workbook = apiRef.current?.getActiveWorkbook();
     const sourceSheet = workbook?.getSheetByName(SOURCE_SHEET);
-    if (!sourceSheet) return;
+    if (!workbook || !sourceSheet) return;
 
     const sourceRows = sourceRowsRef.current;
-    for (const row of Object.values(sourceRows)) {
-      sourceSheet.getRange(row, 1).setFormula("=NA()");
+    sourceNamesRef.current = {};
+    for (const row of [0, ...Object.values(sourceRows)]) {
+      for (const aspect of DAMAGE_ASPECTS) {
+        sourceSheet.getRange(row, ASPECT_COLUMNS[aspect]).setFormula("=NA()");
+      }
     }
 
+    const references = new Map<string, string>();
+    const namesByRow: Record<number, string> = {};
     let nextRow = Math.max(0, ...Object.values(sourceRows)) + 1;
-    for (const [key, value] of Object.entries(damageByKey)) {
+    for (const { key, aspects } of damageSources) {
       const row = sourceRows[key] ?? nextRow++;
       sourceRows[key] = row;
       sourceSheet.getRange(row, 0).setValue(key);
-      sourceSheet.getRange(row, 1).setValue(value);
+      sourceNamesRef.current[key] = {};
+      for (const { aspect, name, value } of aspects) {
+        const column = ASPECT_COLUMNS[aspect];
+        const cell = sourceSheet.getRange(row, column);
+        if (value === undefined) cell.setFormula("=NA()");
+        else cell.setValue(value);
+
+        const existing = workbook.getDefinedName(name);
+        // Respect names created by the user rather than taking ownership of them.
+        if (existing && !managedNamesRef.current.has(name)) continue;
+        const reference = `'${SOURCE_SHEET}'!$${String.fromCharCode(65 + column)}$${row + 1}`;
+        references.set(name, reference);
+        sourceNamesRef.current[key][aspect] = name;
+        if (aspect === "average") namesByRow[row] = name;
+      }
     }
 
+    // Names for rows no longer present must not retain a previous row's damage.
+    for (const name of managedNamesRef.current) {
+      if (!references.has(name)) references.set(name, `'${SOURCE_SHEET}'!$B$1`);
+    }
+    for (const [name, reference] of references) {
+      const existing = workbook.getDefinedName(name);
+      if (!existing) workbook.insertDefinedName(name, reference);
+      else if (existing.getFormulaOrRefString() !== reference) {
+        workbook.updateDefinedNameBuilder(existing.toBuilder().setRef(reference).build());
+      }
+      managedNamesRef.current.add(name);
+    }
+
+    // Read only populated cells; preserve every other part of the saved workbook.
+    const snapshot = workbook.save();
+    for (const sheet of workbook.getSheets()) {
+      if (sheet.getSheetName() === SOURCE_SHEET) continue;
+      const data = snapshot.sheets[sheet.getSheetId()].cellData as
+        Record<number, Record<number, { f?: string } | null> | null> | undefined;
+      for (const [row, cells] of Object.entries(data || {})) {
+        for (const [column, cell] of Object.entries(cells || {})) {
+          if (!cell?.f) continue;
+          const formula = replaceDamageReferences(cell.f, namesByRow);
+          if (formula !== cell.f) sheet.getRange(Number(row), Number(column)).setFormula(formula);
+        }
+      }
+    }
+    setFormulaInput((current) => replaceDamageReferences(current, namesByRow));
     schedulePersist();
-  }, [damageByKey, schedulePersist]);
+  }, [damageSources, schedulePersist]);
 
   const insertDamageReference = useCallback(
     (source: DamageSourceKey) => {
       const key = serializeSourceKey(source);
-      const row = sourceRowsRef.current[key];
-      if (row === undefined) return;
-
-      const reference = `'${SOURCE_SHEET}'!$B$${row + 1}`;
+      const reference = sourceNamesRef.current[key]?.[source.aspect];
+      if (!reference) return;
       setFormulaInput((current) => {
         const savedFormula = activeCellRef.current?.getFormula();
         const formulaStart = current.startsWith("=")
@@ -281,7 +327,7 @@ export function RotationSheet() {
       <div>
         <p className="font-bold text-center">Rotation Sheet</p>
         <p className="mt-1 text-xs text-light-hint text-center">
-          Select a cell, then click an Avg. damage value in Results.
+          Select a cell, then click a Non-crit, Crit, or Avg. value in Results.
         </p>
       </div>
 

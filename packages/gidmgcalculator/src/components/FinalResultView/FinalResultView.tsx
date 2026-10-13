@@ -1,3 +1,5 @@
+import type { CalcAspect } from "@/logic/calculation";
+import { damageValue } from "@/screens/Calculator/RotationSheet/damageReferences";
 import type { CalcResult } from "@/logic/calculator";
 
 import { useTranslation } from "@/hooks";
@@ -63,27 +65,20 @@ export function FinalResultView({ calcResult, ...props }: FinalResultViewProps) 
 
         return {
           title,
-          cells: [
-            {
-              value: values.base,
-              className: "text-right",
-            },
-            {
-              value: values.crit,
-              className: "text-right",
-            },
-            {
-              value: values.average,
-              className: `text-right text-primary-1${
-                isPickingReference && result ? " cursor-pointer hover:bg-dark-2" : ""
+          cells: (["base", "crit", "average"] as const).map((aspect: CalcAspect) => {
+            const selectable = isPickingReference && damageValue(result, aspect) !== undefined;
+            const label = { base: "Non-crit", crit: "Crit", average: "Average" }[aspect];
+            return {
+              value: values[aspect],
+              className: `text-right${aspect === "average" ? " text-primary-1" : ""}${
+                selectable ? " cursor-pointer hover:bg-dark-2" : ""
               }`,
-              title: isPickingReference ? "Insert this Average value into the Rotation Sheet" : undefined,
-              onClick:
-                isPickingReference && result
-                  ? () => insertDamageReference?.({ mainKey, subKey })
-                  : undefined,
-            },
-          ],
+              title: selectable ? `Insert this ${label} value into the Rotation Sheet` : undefined,
+              onClick: selectable
+                ? () => insertDamageReference?.({ mainKey, subKey, aspect })
+                : undefined,
+            };
+          }),
           onDoubleClick() {
             console.info(result);
           },
