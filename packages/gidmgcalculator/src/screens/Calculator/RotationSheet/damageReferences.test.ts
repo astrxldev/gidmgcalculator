@@ -1,4 +1,4 @@
-import type { CalcResult, CalcResultItem } from "@/logic/calculator";
+import type { CalcResult, CalcResultItem } from "../../../logic/calculator";
 import { collectDamageSources, damageValue, replaceDamageReferences } from "./damageReferences";
 
 const attack = {
@@ -31,6 +31,10 @@ describe("rotation damage references", () => {
     const result = {
       NAs: new Map([["2-Hit", attack], ["1-Hit", attack]]),
       ES: new Map([["Skill DMG", attack]]),
+      EB: new Map(),
+      WP: new Map(),
+      RXN: new Map(),
+      EXTRA: new Map(),
     } as CalcResult;
     const sources = collectDamageSources(result, [
       { main: "NAs", subs: ["1-Hit", "Missing", "2-Hit"] },

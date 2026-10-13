@@ -1,5 +1,5 @@
-import type { CalcAspect } from "@/logic/calculation";
-import type { CalcResult, CalcResultItem } from "@/logic/calculator";
+import type { CalcAspect } from "../../../logic/calculation";
+import type { CalcResult, CalcResultItem } from "../../../logic/calculator";
 
 export const SOURCE_SHEET = "Damage Data";
 export const DAMAGE_ASPECTS = ["average", "base", "crit"] as const;
