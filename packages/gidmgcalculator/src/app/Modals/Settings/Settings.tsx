@@ -1,6 +1,5 @@
 import { useRef } from "react";
 import { Object_ } from "ron-utils";
-import { Modal } from "rond";
 
 import type { ElementType, TravelerConfig, TravelerKey } from "@/types";
 
@@ -25,10 +24,11 @@ const useNewAppSettings = () => {
 };
 
 type SettingsProps = {
-  onClose: () => void;
+  id?: string;
+  onClose?: () => void;
 };
 
-const Settings = ({ onClose }: SettingsProps) => {
+export const Settings = ({ id, onClose }: SettingsProps) => {
   const newSettings = useNewAppSettings();
 
   const handleSubmit = () => {
@@ -50,7 +50,7 @@ const Settings = ({ onClose }: SettingsProps) => {
       travelerChanged,
     );
 
-    onClose();
+    onClose?.();
   };
 
   const handleAppSettingChange = <TKey extends keyof AppSettingsState>(
@@ -78,7 +78,7 @@ const Settings = ({ onClose }: SettingsProps) => {
 
   return (
     <form
-      id="app-settings-form"
+      id={id}
       className="h-full overflow-auto space-y-2"
       onSubmit={(e) => {
         e.preventDefault();
@@ -100,16 +100,3 @@ const Settings = ({ onClose }: SettingsProps) => {
     </form>
   );
 };
-
-export const SettingsModal = Modal.wrap(Settings, {
-  title: "Settings",
-  className: ["bg-dark-2", Modal.LARGE_HEIGHT_CLS],
-  style: {
-    width: 412,
-  },
-  bodyCls: "py-0",
-  withHeaderDivider: false,
-  withFooterDivider: false,
-  withActions: true,
-  formId: "app-settings-form",
-});

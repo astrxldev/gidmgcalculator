@@ -5,19 +5,22 @@
 //   value: number;
 // };
 
+type TourPlacement = "top" | "bottom";
+
 export type TourStepDialog = string | React.ReactElement;
 
 export type TourStep = {
   id: string;
   dialogs: TourStepDialog[];
-  siteGutter?: number | [number, number];
+  siteGutter?: number[];
+  /** Default "bottom" */
+  placement?: TourPlacement;
   // ENHANCE: when we need to position intro
   // introAlign?: IntroAlign;
   // introOffsetX?: IntroOffsetX;
   // introWidth?: number;
   /** IDEA: return dynamic id and other configs */
   sitePrep?: () => void | Promise<void>;
-  go?: () => void | Promise<void>;
   lastCheck?: () => void | Promise<void>;
 };
 
@@ -38,6 +41,7 @@ export type TourSite = {
   id: string;
   stepNo: number;
   location: TourSiteLocation;
+  placement: TourPlacement;
   intro: TourSiteIntro;
 };
 

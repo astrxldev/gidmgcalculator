@@ -10,10 +10,10 @@ export type AppModalType =
   | "SETTINGS"
   | "UPLOAD"
   | "DOWNLOAD"
-  | "DONATE"
   | "DATA_REPAIR"
   | "TRAVEL_AGENCY"
-  | "CHAR_ENHANCE_NOTICE"
+  | "CHARACTER_ENHANCEABLE_NOTICE"
+  | "TRAVELER_SETTINGS_NOTICE"
   | "";
 
 export type MySetupsModalType = "FIRST_COMBINE" | "COMBINE_MORE" | "";

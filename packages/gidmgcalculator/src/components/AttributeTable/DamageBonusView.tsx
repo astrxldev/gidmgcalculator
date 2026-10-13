@@ -35,7 +35,9 @@ export function DamageBonusView({ attributes, attkBonusCtrl }: DamageBonusViewPr
     return (
       <Row key={type} aria-label={label}>
         <Cell>{label}</Cell>
-        <Cell className="mr-2">{round(value, 1)}%</Cell>
+        <Cell className="mr-2" translate="no">
+          {round(value, 1)}%
+        </Cell>
       </Row>
     );
   });
@@ -84,7 +86,9 @@ export function DamageBonusView({ attributes, attkBonusCtrl }: DamageBonusViewPr
                   return (
                     <Row key={type} aria-label={label}>
                       <Cell>{label}</Cell>
-                      <Cell className="mr-2">{round(value, 1)}%</Cell>
+                      <Cell className="mr-2" translate="no">
+                        {round(value, 1)}%
+                      </Cell>
                     </Row>
                   );
                 })}

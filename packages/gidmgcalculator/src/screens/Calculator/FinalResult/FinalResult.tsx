@@ -1,5 +1,3 @@
-import { useMemo } from "react";
-
 import { useShallowCalcStore } from "@Store/calculator";
 import { updateMain } from "@Store/calculator/actions";
 import { selectSetup } from "@Store/calculator/selectors";
@@ -35,9 +33,7 @@ export function FinalResultCore() {
     },
   );
 
-  const extraKeys = useMemo(() => {
-    return calcItems.map((item) => item.name);
-  }, [calcItems]);
+  const extraKeys = calcItems.map((item) => item.name);
 
   if (comparedIds.length > 1) {
     return <FinalResultCompare comparedIds={comparedIds} extraKeys={extraKeys} />;
@@ -46,9 +42,11 @@ export function FinalResultCore() {
   return (
     <div className="h-full flex flex-col">
       <div className="px-6 mb-2 shrink-0">
-        <p className="font-bold text-center truncate">{activeSetupName}</p>
+        <p className="font-bold text-center truncate" translate="no">
+          {activeSetupName}
+        </p>
       </div>
-      <div className="grow hide-scrollbar">
+      <div className="grow hide-scrollbar" onDoubleClick={() => console.info(calcResult)}>
         <FinalResultView
           talentMutable
           character={main}

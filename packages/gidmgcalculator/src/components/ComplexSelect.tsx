@@ -1,0 +1,137 @@
+import { ReactNode, useState } from "react";
+import { FaChevronDown } from "react-icons/fa";
+import { clsx, useClickOutside } from "rond";
+
+import type { HTMLTranslate } from "@/types";
+
+const CLASS_BY_SIZE = {
+  small: {
+    option: "text-base",
+    icon: "text-sm",
+  },
+  medium: {
+    option: "text-lg",
+    icon: "text-base",
+  },
+} satisfies Record<string, { option: string; icon?: string }>;
+
+export type ComplexSelectOption<TValue extends string | number> = {
+  label: ReactNode;
+  value: TValue;
+  renderActions?: (args: { closeSelect: () => void }) => JSX.Element;
+};
+
+type ComplexSelectProps<TValue extends string | number> = {
+  className?: string;
+  selectId: string;
+  value?: TValue;
+  options?: ComplexSelectOption<TValue>[];
+  translate?: HTMLTranslate;
+  onChange?: (value: TValue) => void;
+  onToggleDropdown?: (shouldDrop: boolean) => void;
+};
+
+export function ComplexSelect<TValue extends string | number>({
+  className,
+  selectId,
+  value,
+  options = [],
+  translate,
+  onChange,
+  onToggleDropdown,
+}: ComplexSelectProps<TValue>) {
+  const [isDropped, setIsDropped] = useState(false);
+
+  const id = `complex-select${selectId}`;
+  const classes = CLASS_BY_SIZE["medium"];
+
+  const toggleDropdown = (newIsDropped: boolean) => {
+    setIsDropped(newIsDropped);
+    onToggleDropdown?.(newIsDropped);
+
+    const setupSelect = document.getElementById(id);
+
+    if (newIsDropped) {
+      setupSelect?.classList.remove("rounded-t-4xl", "rounded-b-4xl");
+      setupSelect?.classList.add("rounded-t-lg");
+    } else {
+      setTimeout(() => {
+        setupSelect?.classList.remove("rounded-t-lg");
+        setupSelect?.classList.add("rounded-t-4xl", "rounded-b-4xl");
+      }, 100);
+    }
+  };
+
+  const ref = useClickOutside<HTMLDivElement>(() => toggleDropdown(false));
+
+  const onClickOption = (newValue: TValue) => () => {
+    toggleDropdown(false);
+
+    if (newValue !== value) {
+      onChange?.(newValue);
+    }
+  };
+
+  const { label } = options.find((option) => option.value === value) || {};
+
+  const nonActionOptionHeight = 33.6;
+  const dropHeight = options.reduce(
+    (accumulator, option) => accumulator + (option.renderActions ? 69.6 : nonActionOptionHeight),
+    0,
+  );
+
+  const renderKit = {
+    closeSelect: () => toggleDropdown(false),
+  };
+
+  return (
+    <div ref={ref} className={clsx("flex shrink-0 relative", className)}>
+      <button
+        id={id}
+        className="w-full px-8 py-0.5 bg-heading text-black rounded-t-4xl rounded-b-4xl relative cursor-default"
+        onClick={() => toggleDropdown(!isDropped)}
+      >
+        <div
+          className={clsx("w-full truncate font-bold text-center relative z-10", classes.option)}
+          translate={translate}
+        >
+          {label}
+        </div>
+        <FaChevronDown
+          className={clsx("absolute top-1/2 right-4 -translate-y-1/2", classes.icon)}
+        />
+      </button>
+
+      <div
+        className={clsx(
+          "absolute top-full z-20 w-full rounded-b-md bg-light-1 text-black overflow-hidden transition-size duration-100 ease-linear",
+          isDropped && "border border-white shadow-common",
+        )}
+        style={{
+          height: isDropped ? dropHeight : 0,
+        }}
+      >
+        {options.map((option, i) => {
+          return (
+            <div key={i} className="group">
+              <div className={clsx("group-hover:bg-dark-3 group-hover:text-light-1")}>
+                <button
+                  className={clsx(
+                    "px-2 py-0.5 w-full border-t border-b border-white text-left font-semibold truncate cursor-default hover:bg-dark-1",
+                    classes.option,
+                  )}
+                  translate={translate}
+                  onClick={onClickOption(option.value)}
+                >
+                  {option.label}
+                </button>
+              </div>
+
+              {option.renderActions?.(renderKit)}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
